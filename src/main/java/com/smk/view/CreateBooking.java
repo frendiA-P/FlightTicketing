@@ -18,6 +18,7 @@ import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
+import com.vaadin.flow.component.textfield.TextField;
 import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
@@ -35,13 +36,14 @@ public class CreateBooking extends VerticalLayout {
 
     private LocationDao locationDao;
     private final ScheduleDao scheduleDao;
-
     private final BookingDao bookingDao;
+//    final CreateBookingFormLayout createBookingFormLayout;
 
     public CreateBooking(){
         locationDao = new LocationDao();
         scheduleDao = new ScheduleDao();
         bookingDao = new BookingDao();
+//        createBookingFormLayout = new CreateBookingFormLayout();
         createForm();
     }
     private void createForm(){
@@ -80,63 +82,64 @@ public class CreateBooking extends VerticalLayout {
                     Date.from(departureDatePicker.getValue().atStartOfDay(ZoneId.systemDefault()).toInstant())
             );
             grid.setItems(scheduleDTOCollection);
+            grid.setItemDetailsRenderer(CreateBookingFormLayout.createBookingRenderer());
+        });
+
+    }
+}
+
+class CreateBookingFormLayout extends FormLayout{
+    final BookingDao bookingDao;
+
+    private final TextField idTextField = new TextField();
+    private final TextField fromTextField = new TextField("Dari");
+    private final TextField toTextField = new TextField("Ke");
+    private final DatePicker departureDatePicker = new DatePicker("Tanggal Keberangkatan");
+    private final TextField nameTextField = new TextField("Nama");
+    private final TextField priceTextField = new TextField("Harga");
+    private final Button saveBooking = new Button("save");
+
+    public CreateBookingFormLayout() {
+        bookingDao = new BookingDao();
+
+        idTextField.setVisible(false);
+        add(idTextField);
+        fromTextField.setReadOnly(true);
+        toTextField.setReadOnly(true);
+        departureDatePicker.setReadOnly(true);
+        Stream.of(fromTextField, toTextField,departureDatePicker,nameTextField,priceTextField,saveBooking).forEach(this::add);
+        saveBooking.addClickListener(ClickEvent -> {
+            Booking booking = new Booking();
+            booking.setScheduleId(Long.parseLong(idTextField.getValue()));
+            booking.setName(nameTextField.getValue());
+            booking.setPrice(Double.parseDouble(priceTextField.getValue()));
+            Optional<Integer> id = bookingDao.save(booking);
+            id.ifPresent(integer -> {
+                ConfirmDialog confirmDialog = new ConfirmDialog();
+                confirmDialog.setText("booking created with id = " + integer);
+                confirmDialog.setCancelable(false);
+                confirmDialog.setRejectable(false);
+                confirmDialog.setConfirmText("OK");
+                confirmDialog.addConfirmListener(event -> {
+                    confirmDialog.close();
+                });
+                add(confirmDialog);
+                confirmDialog.open();
+            });
         });
 
     }
 
-    private static class CreateBookingFormLayout extends FormLayout{
-        private final TextField idTextField = new TextField();
-        private final TextField fromTextField = new TextField("Dari");
-        private final TextField toTextField = new TextField("Ke");
-        private final DatePicker departureDatePicker = new DatePicker("Tanggal Keberangkatan");
-        private final TextField nameTextField = new TextField("Nama");
-        private final TextField priceTextField = new TextField("Harga");
-        private final Button saveBooking = new Button("save");
-
-        public CreateBookingFormLayout() {
-            idTextField.setVisible(false);
-            add(idTextField);
-            fromTextField.setReadOnly(true);
-            toTextField.setReadOnly(true);
-            departureDatePicker.setReadOnly(true);
-            Stream.of(fromTextField, toTextField,departureDatePicker,nameTextField,priceTextField,saveBooking).forEach(this::add);
-            saveBooking.addClickListener(ClickEvent -> {
-                Booking booking = new Booking();
-                booking.setScheduleId(Long.parseLong(idTextField.getValue()));
-                booking.setName(nameTextField.getValue());
-                booking.setPrice(Double.parseDouble(priceTextField.getValue()));
-                Optional<Integer> id = bookingDao.save(booking);
-                id.ifPresent(integer -> {
-                    ConfirmDialog confirmDialog = new ConfirmDialog();
-                    confirmDialog.setText("booking created with id = " + integer);
-                    confirmDialog.setCancelable(false);
-                    confirmDialog.setRejectable(false);
-                    confirmDialog.setConfirmText("OK");
-                    confirmDialog.addConfirmListener(event -> {
-                        confirmDialog.close();
-                    });
-                    add(confirmDialog);
-                    confirmDialog.open();
-                });
-            });
-
-        }
-
-        public void setScheduleDTO(ScheduleDTO scheduleDTO){
-            idTextField.setValue(String.valueOf(scheduleDTO.getId()));
-            fromTextField.setValue(scheduleDTO.getDepartureLocation());
-            toTextField.setValue(scheduleDTO.getArrivalLocation());
-            departureDatePicker.setValue(LocalDate.parse(scheduleDTO.getDepartureLocation().toString()));
-
-        }
-
-        private static ComponentRenderer<CreateBookingFormLayout,ScheduleDTO> createBookingRenderer(){
-            return new ComponentRenderer<>(CreateBookingFormLayout::new,CreateBookingFormLayout::setScheduleDTO);
-        }
-
-        grid.setItemDetailsRenderer(createBookingRenderer());
+    public void setScheduleDTO(ScheduleDTO scheduleDTO){
+        idTextField.setValue(String.valueOf(scheduleDTO.getId()));
+        fromTextField.setValue(scheduleDTO.getDepartureLocation());
+        toTextField.setValue(scheduleDTO.getArrivalLocation());
+        departureDatePicker.setValue(LocalDate.parse(scheduleDTO.getDepartureLocation().toString()));
 
     }
 
+    public static ComponentRenderer<CreateBookingFormLayout,ScheduleDTO> createBookingRenderer(){
+        return new ComponentRenderer<>(CreateBookingFormLayout::new,CreateBookingFormLayout::setScheduleDTO);
+    }
 
 }

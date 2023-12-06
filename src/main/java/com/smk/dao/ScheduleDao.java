@@ -60,7 +60,7 @@ public class ScheduleDao implements Dao<Schedule,Integer>{
                 PreparedStatement ps = conn.prepareStatement(sql);
                 ps.setLong(1, departureID);
                 ps.setLong(2, arrivalID);
-                ps.setLong(3, new java.sql.Date(departureDate.getTime()));
+                ps.setDate(3, new java.sql.Date(departureDate.getTime()));
                 ResultSet rs = ps.executeQuery();
                 while (rs.next()){
                     ScheduleDTO scheduleDTO = new ScheduleDTO();
